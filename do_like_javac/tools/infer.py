@@ -20,9 +20,9 @@ infer_group.add_argument('-solverArgs', '--solverArgs', metavar='<solverArgs>',
 infer_group.add_argument('-cfArgs', '--cfArgs', metavar='<cfArgs>',
                         action='store',default='',
                         help='arguments for checker framework')
-infer_group.add_argument('-j', '--jar', metavar='<jar_name>',
-                        action='store',dest='jar_name',
-                        help='The name of jar file that checker framework inference needs.')
+infer_group.add_argument('-j', '--jar', metavar='<a.jar b.jar c.jar ...>',
+                        action='store', dest='jarFileList', nargs='*',
+                        help='List of the name of jar files that checker framework inference needs.')
 
 def run(args, javac_commands, jars):
     # the dist directory if CFI.
@@ -33,7 +33,7 @@ def run(args, javac_commands, jars):
 
     for jc in javac_commands:
         target_cp = jc['javac_switches']['classpath'] + \
-            ':' + os.path.join(args.lib_dir, args.jar_name)
+            ':'.join([os.path.join(args.lib_dir, each_jar) for each_jar in args.jarFileList])
 
         cp = target_cp + \
              ':' + os.path.join(CFI_dist, 'checker.jar') + \
