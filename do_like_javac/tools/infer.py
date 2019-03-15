@@ -23,7 +23,7 @@ infer_group.add_argument('-cfArgs', '--cfArgs', metavar='<cfArgs>',
 
 def run(args, javac_commands, jars):
     # the dist directory if CFI.
-    CFI_dist = os.path.join(os.environ['JSR308'], 'checker-framework-inference', 'dist')
+    CFI_dist = os.path.join(os.path.abspath(os.path.join(os.getcwd(), "../../../")), 'checker-framework-inference', 'dist')
     CFI_command = ['java']
 
     print os.environ
