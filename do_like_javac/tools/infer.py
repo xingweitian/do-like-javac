@@ -32,8 +32,13 @@ def run(args, javac_commands, jars):
     print os.environ
 
     for jc in javac_commands:
-        target_cp = jc['javac_switches']['classpath'] + \
-            ':'.join([os.path.join(args.lib_dir, each_jar) for each_jar in args.jarFileList])
+
+        target_cp = jc['javac_switches']['classpath']
+
+        if args.jarFileList:
+
+            target_cp = target_cp + \
+                ':'.join([os.path.join(args.lib_dir, each_jar) for each_jar in args.jarFileList])
 
         cp = target_cp + \
              ':' + os.path.join(CFI_dist, 'checker.jar') + \
