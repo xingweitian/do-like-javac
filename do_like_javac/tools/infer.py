@@ -1,4 +1,4 @@
-import os
+import os,sys
 import argparse
 import common
 
@@ -23,43 +23,70 @@ infer_group.add_argument('-cfArgs', '--cfArgs', metavar='<cfArgs>',
 infer_group.add_argument('-j', '--jar', metavar='<a.jar b.jar c.jar ...>',
                         action='store', dest='jarFileList', nargs='*',
                         help='List of the name of jar files that checker framework inference needs.')
+infer_group.add_argument('--inPlace', action='store_true',
+                        help='Whether or not the annoations should be inserted in the original source code')
+infer_group.add_argument('--crashExit', action='store_true',
+                        help='set it then dljc will early exit if it found a round of inference crashed during the iteration.')
 
 def run(args, javac_commands, jars):
-    # the dist directory if CFI.
+    print os.environ
+    idx = 0
+    for jc in javac_commands:
+        jaif_file = "logs/infer_result_{}.jaif".format(idx)
+        cmd = get_tool_command(args, jc['javac_switches']['classpath'], jc['java_files'], jaif_file)
+        status = common.run_cmd(cmd, args, 'infer')
+        if args.crashExit and not status['return_code'] == 0:
+            print "----- CF Inference/Typecheck crashed! Terminates DLJC. -----"
+            sys.exit(1)
+        idx += 1
+
+def get_tool_command(args, target_classpath, java_files, jaif_file="default.jaif"):
+    # the dist directory of CFI.
     CFI_dist = os.path.join(os.path.abspath(os.path.join(os.getcwd(), "../../../")), 'checker-framework-inference', 'dist')
     CFI_command = ['java']
 
-    print os.environ
+    if args.jarFileList:
+        target_classpath = target_classpath + \
+                           ':'.join([os.path.join(args.lib_dir, each_jar) for each_jar in args.jarFileList])
 
-    for jc in javac_commands:
-
-        target_cp = jc['javac_switches']['classpath']
-
-        if args.jarFileList:
-
-            target_cp = target_cp + \
-                ':'.join([os.path.join(args.lib_dir, each_jar) for each_jar in args.jarFileList])
-
-        cp = target_cp + \
+    cp = target_classpath + \
              ':' + os.path.join(CFI_dist, 'checker.jar') + \
              ':' + os.path.join(CFI_dist, 'plume.jar') + \
              ':' + os.path.join(CFI_dist, 'com.microsoft.z3.jar') + \
              ':' + os.path.join(CFI_dist, 'checker-framework-inference.jar')
 
-        if 'CLASSPATH' in os.environ:
-            cp += ':' + os.environ['CLASSPATH']
+    if 'CLASSPATH' in os.environ:
+        cp += ':' + os.environ['CLASSPATH']
 
-        cmd = CFI_command + ['-classpath', cp,
-                             'checkers.inference.InferenceLauncher',
-                             '--solverArgs', args.solverArgs,
-                             '--cfArgs', args.cfArgs,
-                             '--checker', args.checker,
-                             '--solver', args.solver,
-                             '--mode', args.mode,
-                             '--hacks=true',
-                             '--targetclasspath', target_cp,
-                             '--logLevel=WARNING',
-                             '-afud', args.afuOutputDir]
-        cmd.extend(jc['java_files'])
+        # os env classpath must be added to targetclasspath for running CFI in
+        # typecheck mode
+        target_classpath += ':' + os.environ['CLASSPATH']
+        # TODO: see if this is still needed:
+        # env_classpath must also have a project's dependent jars
+        # os.environ['CLASSPATH'] = target_classpath
 
-        common.run_cmd(cmd, args, 'infer')
+    CFI_command += [        # '-p', # printCommands before executing
+                            '-classpath', cp,
+                            'checkers.inference.InferenceLauncher']
+
+    if not args.cfArgs == "":
+        CFI_command += [    '--cfArgs', args.cfArgs]
+
+    CFI_command += [        '--checker', args.checker,
+                            '--solver', args.solver,
+                            '--solverArgs', args.solverArgs,
+                            '--mode', args.mode,
+                            '--hacks=true',
+                            '--targetclasspath', target_classpath,
+                            '--logLevel=INFO',
+                            '--jaifFile', jaif_file]
+
+    if args.inPlace:
+        CFI_command += ['--inPlace=true']
+    else:
+        CFI_command += ['-afud', args.afuOutputDir]
+
+    CFI_command.extend(java_files)
+
+    return CFI_command
+

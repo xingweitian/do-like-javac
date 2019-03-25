@@ -7,14 +7,24 @@ import pprint
 argparser = None
 
 def run(args, javac_commands, jars):
-    # checker-framework javac.
-    javacheck = os.path.abspath(os.path.join(os.getcwd(), "../../../")) + "/checker-framework/checker/bin/javac"
-    checker_command = [javacheck, "-processor", args.checker]
-
     for jc in javac_commands:
         pprint.pformat(jc)
-        javac_switches = jc['javac_switches']
-        cp = javac_switches['classpath']
-        java_files = ' '.join(jc['java_files'])
-        cmd = checker_command + ["-classpath", cp, java_files]
+
+        class_path = jc['javac_switches']['classpath']
+
+        cmd = get_tool_command(args, class_path, jc['java_files'])
+
         common.run_cmd(cmd, args, 'check')
+
+def get_tool_command(args, target_classpath, java_files):
+    # checker-framework javac.
+    if 'CLASSPATH' in os.environ:
+        target_classpath += ':' + os.environ['CLASSPATH']
+
+    javacheck = os.path.abspath(os.path.join(os.getcwd(), "../../../")) + "/checker-framework/checker/bin/javac"
+    checker_command = [javacheck,
+                       "-processor", args.checker,
+                       "-classpath", target_classpath]
+    checker_command.extend(java_files)
+
+    return checker_command
