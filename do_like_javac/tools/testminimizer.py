@@ -2,7 +2,6 @@ import argparse, math
 import os, shutil
 from shutil import copy2
 from os.path import basename
-import subprocess32 as subprocess
 import re
 from . import (common, infer, check)
 
