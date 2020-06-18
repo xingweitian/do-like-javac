@@ -65,7 +65,7 @@ def get_tool_command(args, target_classpath, java_files, jaif_file="default.jaif
     assert len(split_version_number) >= 1, 'No openjdk version info found. java_version: {}'.format(java_version)
     is_jvm8 = split_version_number[0] == "8" if len(split_version_number) == 1 else split_version_number[1] == "8"
     if is_jvm8:
-        print 'Using Java 8, runtime bcp will be added.'
+        print('Using Java 8, runtime bcp will be added.')
         CFI_command += ['-DInferenceLauncher.runtime.bcp=' + os.path.join(CFI_dist, "javac.jar")]
 
     cp = target_classpath + \
